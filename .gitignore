@@ -1,0 +1,19 @@
+﻿# Dart
+.dart_tool/
+.packages
+
+# Elixir
+_build/
+deps/
+.elixir_ls/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
