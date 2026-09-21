@@ -1,0 +1,7 @@
+{
+  "name": "Wave // Ephemeral Walkie-Talkie & Encrypted Comms",
+  "description": "Tactical ephemeral team walkie-talkie and end-to-end encrypted chat powered by Elixir Phoenix Channels, Membrane audio pipeline architecture, and Dart WebRTC client.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

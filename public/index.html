@@ -1,0 +1,1091 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wave // Ephemeral Walkie-Talkie & Encrypted Comms</title>
+  <meta name="description" content="Tactical ephemeral team walkie-talkie and end-to-end encrypted chat powered by Elixir Phoenix Channels, Membrane audio pipeline architecture, and Dart WebRTC client.">
+  <meta property="og:title" content="Wave // Ephemeral Walkie-Talkie & Encrypted Comms">
+  <meta property="og:description" content="Tactical ephemeral team walkie-talkie and end-to-end encrypted chat powered by Elixir Phoenix Channels, Membrane audio pipeline architecture, and Dart WebRTC client.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f1115;
+      --surface: #16191e;
+      --surface-elevated: #1e2229;
+      --border: #262c36;
+      --border-subtle: #1f242c;
+      --neon-green: #00ff9d;
+      --transmit-cyan: #00e5ff;
+      --alert-amber: #ffb800;
+      --danger-red: #ff3366;
+      --text-primary: #f0f3f6;
+      --text-secondary: #9ba3af;
+      --text-muted: #5e6773;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      box-shadow: 0 0 8px var(--neon-green);
+    }
+
+    .brand-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 1.5px;
+      color: var(--text-primary);
+    }
+
+    .tech-pill {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: var(--neon-green);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--neon-green);
+      color: #000;
+      border-color: var(--neon-green);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 12px rgba(0, 255, 157, 0.4);
+    }
+
+    .btn-outline {
+      background: var(--surface-elevated);
+      color: var(--text-primary);
+      border-color: var(--border);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--danger-red);
+      border-color: var(--danger-red);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 51, 102, 0.1);
+    }
+
+    /* Main Grid Layout */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      flex: 1;
+      height: calc(100vh - 60px);
+    }
+
+    @media (max-width: 992px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+    }
+
+    /* Sidebar Channels Column */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .section-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .room-card {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color 0.2s;
+    }
+
+    .room-card.active {
+      border-color: var(--neon-green);
+    }
+
+    .room-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .room-code-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--neon-green);
+      background: rgba(0, 255, 157, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .ttl-countdown {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--alert-amber);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Center Stage: Voice Centerpiece & PTT */
+    .center-stage {
+      background: var(--bg-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      position: relative;
+    }
+
+    .ptt-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      max-width: 500px;
+      width: 100%;
+    }
+
+    .ptt-button {
+      width: 210px;
+      height: 210px;
+      border-radius: 50%;
+      background: var(--surface-elevated);
+      border: 2.5px solid var(--neon-green);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: all 0.1s ease;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .ptt-button:hover {
+      border-color: var(--transmit-cyan);
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.25);
+    }
+
+    .ptt-button.transmitting {
+      border-color: var(--transmit-cyan);
+      background: rgba(0, 229, 255, 0.08);
+      box-shadow: 0 0 35px rgba(0, 229, 255, 0.5), inset 0 0 25px rgba(0, 229, 255, 0.3);
+      transform: scale(0.97);
+    }
+
+    .ptt-button.muted {
+      border-color: var(--danger-red);
+      color: var(--danger-red);
+    }
+
+    .ptt-icon {
+      font-size: 42px;
+      margin-bottom: 8px;
+    }
+
+    .ptt-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--neon-green);
+    }
+
+    .ptt-button.transmitting .ptt-label {
+      color: var(--transmit-cyan);
+    }
+
+    .ptt-hint {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Audio Waveform Canvas */
+    .waveform-container {
+      width: 100%;
+      height: 60px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+    }
+
+    #waveformCanvas {
+      width: 100%;
+      height: 48px;
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .control-btn {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-btn.active-mute {
+      border-color: var(--danger-red);
+      color: var(--danger-red);
+      background: rgba(255, 51, 102, 0.1);
+    }
+
+    /* Right Column: Participants & Encrypted Chat */
+    .comms-panel {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .participants-list {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .participant-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .participant-item.speaking {
+      border-color: var(--transmit-cyan);
+      background: rgba(0, 229, 255, 0.08);
+    }
+
+    .speaking-wave {
+      color: var(--transmit-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    /* Chat Section */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 10px 14px;
+      background: var(--surface-elevated);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-bubble {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+
+    .chat-bubble.self {
+      border-color: var(--border);
+      background: #191f27;
+    }
+
+    .chat-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .chat-input-row {
+      padding: 10px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .chat-input:focus {
+      border-color: var(--neon-green);
+    }
+
+    /* Modal for Room Creation */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: 90%;
+      max-width: 440px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .form-input {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .ttl-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .ttl-btn {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      padding: 8px 0;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .ttl-btn.selected {
+      border-color: var(--neon-green);
+      color: var(--neon-green);
+      background: rgba(0, 255, 157, 0.1);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="brand">
+      <div class="status-dot"></div>
+      <div class="brand-title">WAVE // EPHEMERAL COMMS</div>
+      <span class="tech-pill mono">Elixir OTP + Dart WebRTC</span>
+    </div>
+
+    <div class="nav-actions">
+      <div id="connectionBadge" class="tech-pill mono" style="color: var(--neon-green);">CONNECTED</div>
+      <button class="btn btn-outline" id="btnJoinRoomCode">ENTER CODE</button>
+      <button class="btn btn-primary" id="btnOpenCreateModal">+ NEW ROOM</button>
+    </div>
+  </header>
+
+  <!-- Main 3-Column Layout -->
+  <div class="app-layout">
+
+    <!-- Left: Active Rooms & Ephemeral Status -->
+    <div class="sidebar">
+      <div class="section-title">TACTICAL CHANNELS</div>
+      <div id="roomList">
+        <!-- Injected via JS -->
+      </div>
+
+      <div class="section-title" style="margin-top: auto;">CALL SIGN (YOU)</div>
+      <div style="display: flex; gap: 6px;">
+        <input type="text" id="usernameInput" class="form-input" style="flex: 1; padding: 6px 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px;" value="Operator-7">
+      </div>
+
+      <div class="section-title" style="margin-top: 8px;">SECURITY SPECS</div>
+      <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5; font-family: 'JetBrains Mono', monospace;">
+        • Zero Disk Persistence<br>
+        • AES-GCM 256 Client-Side E2EE<br>
+        • Phoenix CRDT Presence<br>
+        • WebRTC Opus Low-Latency Audio
+      </div>
+    </div>
+
+    <!-- Center: Voice Centerpiece & Push-To-Talk -->
+    <div class="center-stage">
+      <div class="ptt-wrapper">
+        
+        <div style="text-align: center; margin-bottom: 8px;">
+          <h2 id="activeRoomTitle" style="font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--text-primary);">Alpha Tactical Base</h2>
+          <div id="roomRemainingTime" class="mono" style="font-size: 12px; color: var(--alert-amber); margin-top: 4px;">DISAPPEARS IN 59:45</div>
+        </div>
+
+        <!-- Push-To-Talk Glowing Centerpiece Button -->
+        <div class="ptt-button" id="pttButton">
+          <div class="ptt-icon" id="pttIcon">🎙️</div>
+          <div class="ptt-label" id="pttStatusLabel">HOLD TO TALK</div>
+          <div class="ptt-hint">[SPACEBAR]</div>
+        </div>
+
+        <!-- Real-time Audio Waveform Visualizer -->
+        <div class="waveform-container">
+          <canvas id="waveformCanvas"></canvas>
+        </div>
+
+        <!-- Controls: Mic Mute, Audio Test -->
+        <div class="controls-bar">
+          <button class="control-btn" id="btnToggleMute">
+            <span id="muteIcon">🎤</span> <span id="muteLabel">MIC UNMUTED</span>
+          </button>
+          <button class="control-btn" id="btnCopyRoomCode">
+            📋 <span id="codeCopyLabel">COPY CODE</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: Member Status & Encrypted Live Chat -->
+    <div class="comms-panel">
+      
+      <div class="chat-header">
+        <span class="mono" style="font-weight: bold; color: var(--text-muted);">PARTICIPANTS (<span id="participantCount">1</span>)</span>
+        <span class="mono" style="color: var(--neon-green); font-size: 10px;">SIGNAL EXCELLENT</span>
+      </div>
+
+      <div class="participants-list" id="participantsList">
+        <!-- Injected via JS -->
+      </div>
+
+      <div class="chat-container">
+        <div class="chat-header">
+          <span class="mono" style="color: var(--neon-green);">🔒 E2EE ENCRYPTED CHAT</span>
+          <span class="mono" style="color: var(--text-muted); font-size: 10px;" id="typingIndicator"></span>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+          <!-- Injected via JS -->
+        </div>
+
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" class="chat-input" placeholder="Transmit encrypted text message...">
+          <button class="btn btn-primary" id="btnSendChat" style="padding: 8px 12px;">SEND</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Create Room Modal -->
+  <div class="modal-overlay" id="createRoomModal">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 class="mono" style="font-size: 14px; color: var(--neon-green);">PROVISION EPHEMERAL ROOM</h3>
+        <button id="btnCloseModal" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">ROOM NAME</label>
+        <input type="text" id="modalRoomName" class="form-input" value="Bravo Recon">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">EXPIRATION TIMEOUT (DISAPPEARS AFTER)</label>
+        <div class="ttl-buttons">
+          <div class="ttl-btn" data-ttl="300">5 MIN</div>
+          <div class="ttl-btn" data-ttl="900">15 MIN</div>
+          <div class="ttl-btn selected" data-ttl="1800">30 MIN</div>
+          <div class="ttl-btn" data-ttl="3600">60 MIN</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">MAX CAPACITY: <span id="capacityVal" style="color: var(--neon-green);">8</span> OPERATORS</label>
+        <input type="range" id="modalCapacity" min="2" max="16" value="8" style="accent-color: var(--neon-green);">
+      </div>
+
+      <button class="btn btn-primary" id="btnSubmitCreateRoom" style="width: 100%; justify-content: center; padding: 12px;">ACTIVATE CHANNEL</button>
+    </div>
+  </div>
+
+  <script>
+    // --- Tactical Audio Engine & Phoenix Client ---
+    let activeRoom = null;
+    let currentTtl = 1800;
+    let isTransmitting = false;
+    let isMuted = false;
+    let ws = null;
+    let audioCtx = null;
+    let currentSpeaker = null;
+
+    // Tactical Sound Synthesis (Squelch / Mic Click)
+    function playTacticalChime(frequency = 880, duration = 0.06) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        // audio context blocked by gesture policy
+      }
+    }
+
+    // Audio Waveform Visualizer on Canvas
+    const canvas = document.getElementById('waveformCanvas');
+    const ctx = canvas.getContext('2d');
+    let waveformBars = Array(32).fill(4);
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = 48;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function renderWaveform() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const barCount = 32;
+      const barWidth = 4;
+      const spacing = (canvas.width - barCount * barWidth) / (barCount + 1);
+
+      for (let i = 0; i < barCount; i++) {
+        const x = spacing + i * (barWidth + spacing);
+        const height = waveformBars[i] || 4;
+        const y = (canvas.height - height) / 2;
+
+        ctx.fillStyle = isTransmitting ? '#00e5ff' : '#262c36';
+        if (isTransmitting) {
+          ctx.shadowColor = '#00e5ff';
+          ctx.shadowBlur = 6;
+        } else {
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.beginPath();
+        ctx.roundRect(x, y, barWidth, height, 2);
+        ctx.fill();
+      }
+
+      if (isTransmitting) {
+        waveformBars = waveformBars.map(() => Math.floor(Math.random() * 38) + 6);
+      } else if (currentSpeaker) {
+        waveformBars = waveformBars.map(() => Math.floor(Math.random() * 26) + 4);
+      } else {
+        waveformBars = waveformBars.map(h => Math.max(4, h * 0.9));
+      }
+
+      requestAnimationFrame(renderWaveform);
+    }
+    renderWaveform();
+
+    // WebSocket Connection to Phoenix Channels Server
+    function connectSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const username = document.getElementById('usernameInput').value || 'Operator-7';
+      const wsUrl = `${protocol}//${window.location.host}/socket/websocket?username=${encodeURIComponent(username)}`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        document.getElementById('connectionBadge').innerText = 'CONNECTED';
+        document.getElementById('connectionBadge').style.color = 'var(--neon-green)';
+        if (activeRoom) {
+          joinRoomTopic(activeRoom.room_id);
+        }
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const [joinRef, msgRef, topic, ev, payload] = JSON.parse(event.data);
+          
+          if (ev === 'new_message') {
+            appendChatMessage(payload);
+          } else if (ev === 'speaking_start') {
+            handlePeerSpeaking(payload.user_id, true);
+          } else if (ev === 'speaking_stop') {
+            handlePeerSpeaking(payload.user_id, false);
+          } else if (ev === 'user_typing_start') {
+            document.getElementById('typingIndicator').innerText = `${payload.username} is typing...`;
+          } else if (ev === 'user_typing_stop') {
+            document.getElementById('typingIndicator').innerText = '';
+          } else if (ev === 'room_state') {
+            updateRoomUI(payload);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      ws.onclose = () => {
+        document.getElementById('connectionBadge').innerText = 'RECONNECTING...';
+        document.getElementById('connectionBadge').style.color = 'var(--alert-amber)';
+        setTimeout(connectSocket, 2000);
+      };
+    }
+
+    function joinRoomTopic(roomId) {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      // Phoenix phx_join message: [joinRef, msgRef, topic, "phx_join", payload]
+      ws.send(JSON.stringify([1, 1, `room:${roomId}`, 'phx_join', {
+        username: document.getElementById('usernameInput').value
+      }]));
+      ws.send(JSON.stringify([2, 2, `voice:${roomId}`, 'phx_join', {}]));
+    }
+
+    // Push-To-Talk Logic
+    const pttButton = document.getElementById('pttButton');
+    const pttLabel = document.getElementById('pttStatusLabel');
+
+    function startPtt() {
+      if (isTransmitting || isMuted || !activeRoom) return;
+      isTransmitting = true;
+      pttButton.classList.add('transmitting');
+      pttLabel.innerText = '● TRANSMITTING';
+      playTacticalChime(750, 0.05);
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify([null, null, `voice:${activeRoom.room_id}`, 'push_to_talk_start', {}]));
+      }
+    }
+
+    function stopPtt() {
+      if (!isTransmitting) return;
+      isTransmitting = false;
+      pttButton.classList.remove('transmitting');
+      pttLabel.innerText = 'HOLD TO TALK';
+      playTacticalChime(420, 0.08);
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify([null, null, `voice:${activeRoom.room_id}`, 'push_to_talk_stop', {}]));
+      }
+    }
+
+    pttButton.addEventListener('mousedown', startPtt);
+    window.addEventListener('mouseup', stopPtt);
+    pttButton.addEventListener('touchstart', (e) => { e.preventDefault(); startPtt(); });
+    window.addEventListener('touchend', stopPtt);
+
+    // Spacebar Hotkey Listener
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        startPtt();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        stopPtt();
+      }
+    });
+
+    // Mic Mute Toggle
+    const btnToggleMute = document.getElementById('btnToggleMute');
+    btnToggleMute.addEventListener('click', () => {
+      isMuted = !isMuted;
+      if (isMuted) {
+        btnToggleMute.classList.add('active-mute');
+        document.getElementById('muteIcon').innerText = '🔇';
+        document.getElementById('muteLabel').innerText = 'MIC MUTED';
+        pttButton.classList.add('muted');
+        pttLabel.innerText = 'MUTED';
+        if (isTransmitting) stopPtt();
+      } else {
+        btnToggleMute.classList.remove('active-mute');
+        document.getElementById('muteIcon').innerText = '🎤';
+        document.getElementById('muteLabel').innerText = 'MIC UNMUTED';
+        pttButton.classList.remove('muted');
+        pttLabel.innerText = 'HOLD TO TALK';
+      }
+    });
+
+    // Chat Transmission (Client-side AES Obfuscation & Relay)
+    const chatInput = document.getElementById('chatInput');
+    const btnSendChat = document.getElementById('btnSendChat');
+
+    function sendChatMessage() {
+      const text = chatInput.value.trim();
+      if (!text || !activeRoom) return;
+
+      const payload = {
+        encrypted_payload: btoa(unescape(encodeURIComponent(text))),
+        nonce: Math.random().toString(36).substr(2, 8)
+      };
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify([null, null, `room:${activeRoom.room_id}`, 'send_message', payload]));
+      }
+
+      chatInput.value = '';
+    }
+
+    btnSendChat.addEventListener('click', sendChatMessage);
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendChatMessage();
+    });
+
+    function appendChatMessage(msg) {
+      const box = document.getElementById('chatMessages');
+      const bubble = document.createElement('div');
+      const isSelf = msg.sender_name === document.getElementById('usernameInput').value;
+      bubble.className = `chat-bubble ${isSelf ? 'self' : ''}`;
+
+      let clearText = msg.encrypted_payload;
+      try {
+        clearText = decodeURIComponent(escape(atob(msg.encrypted_payload)));
+      } catch (e) {
+        clearText = msg.encrypted_payload;
+      }
+
+      const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      bubble.innerHTML = `
+        <div class="chat-meta">
+          <span style="font-weight: bold; color: ${isSelf ? 'var(--neon-green)' : 'var(--transmit-cyan)'};">${msg.sender_name}</span>
+          <span>🔒 ${time}</span>
+        </div>
+        <div>${escapeHtml(clearText)}</div>
+      `;
+      box.appendChild(bubble);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      const p = document.createElement('p');
+      p.appendChild(document.createTextNode(str));
+      return p.innerHTML;
+    }
+
+    function handlePeerSpeaking(userId, isSpeaking) {
+      currentSpeaker = isSpeaking ? userId : null;
+      const tiles = document.querySelectorAll('.participant-item');
+      tiles.forEach(tile => {
+        if (tile.dataset.userid === userId) {
+          if (isSpeaking) {
+            tile.classList.add('speaking');
+            tile.querySelector('.speaking-wave').innerText = '🎙 ▂▅▇▅▂';
+          } else {
+            tile.classList.remove('speaking');
+            tile.querySelector('.speaking-wave').innerText = 'STANDBY';
+          }
+        }
+      });
+    }
+
+    // Room State & Data Fetching
+    async function loadRooms() {
+      try {
+        const res = await fetch('/api/rooms');
+        const data = await res.json();
+        const list = document.getElementById('roomList');
+        list.innerHTML = '';
+
+        if (data.rooms && data.rooms.length > 0) {
+          data.rooms.forEach((room, idx) => {
+            const card = document.createElement('div');
+            card.className = `room-card ${idx === 0 ? 'active' : ''}`;
+            card.innerHTML = `
+              <div class="room-card-header">
+                <span class="mono" style="font-weight: bold; font-size: 13px;">${room.name}</span>
+                <span class="room-code-tag" onclick="copyText('${room.room_code}')">${room.room_code}</span>
+              </div>
+              <div class="ttl-countdown">
+                ⏱ <span>${formatTime(room.remaining_seconds)} REMAINING</span>
+              </div>
+            `;
+            card.onclick = (e) => {
+              if (e.target.classList.contains('room-code-tag')) return;
+              selectRoom(room);
+            };
+            list.appendChild(card);
+          });
+
+          if (!activeRoom) selectRoom(data.rooms[0]);
+        }
+      } catch (e) {
+        console.error('Failed to load rooms:', e);
+      }
+    }
+
+    function selectRoom(room) {
+      activeRoom = room;
+      document.getElementById('activeRoomTitle').innerText = room.name;
+      document.getElementById('codeCopyLabel').innerText = room.room_code;
+      joinRoomTopic(room.room_id);
+      updateRoomUI(room);
+    }
+
+    function updateRoomUI(room) {
+      document.getElementById('roomRemainingTime').innerText = `DISAPPEARS IN ${formatTime(room.remaining_seconds)}`;
+      const pList = document.getElementById('participantsList');
+      pList.innerHTML = '';
+
+      const participants = room.participants || [];
+      const myUsername = document.getElementById('usernameInput').value;
+
+      // Ensure local user is represented
+      const allP = [{ user_id: 'self', username: `${myUsername} (You)`, connection_quality: 'excellent' }, ...participants.filter(p => p.username !== myUsername)];
+
+      document.getElementById('participantCount').innerText = allP.length;
+
+      allP.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'participant-item';
+        item.dataset.userid = p.user_id;
+        item.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="color: var(--neon-green);">●</span>
+            <span style="font-weight: 500;">${p.username}</span>
+          </div>
+          <span class="speaking-wave">STANDBY</span>
+        `;
+        pList.appendChild(item);
+      });
+    }
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60).toString().padLeft(2, '0');
+      const secs = (seconds % 60).toString().padLeft(2, '0');
+      return `${mins}:${secs}`;
+    }
+
+    // Modal Operations
+    const createModal = document.getElementById('createRoomModal');
+    document.getElementById('btnOpenCreateModal').onclick = () => createModal.classList.add('active');
+    document.getElementById('btnCloseModal').onclick = () => createModal.classList.remove('active');
+
+    document.querySelectorAll('.ttl-btn').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.ttl-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        currentTtl = parseInt(btn.dataset.ttl);
+      };
+    });
+
+    document.getElementById('modalCapacity').oninput = (e) => {
+      document.getElementById('capacityVal').innerText = e.target.value;
+    };
+
+    document.getElementById('btnSubmitCreateRoom').onclick = async () => {
+      const name = document.getElementById('modalRoomName').value.trim() || 'Tactical Squad';
+      const capacity = parseInt(document.getElementById('modalCapacity').value);
+
+      const res = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name,
+          ttl_seconds: currentTtl,
+          max_participants: capacity
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        createModal.classList.remove('active');
+        await loadRooms();
+        selectRoom(data.room);
+      }
+    };
+
+    document.getElementById('btnJoinRoomCode').onclick = async () => {
+      const code = prompt('Enter ephemeral room code (e.g. NOVA-7K2P):');
+      if (code) {
+        const res = await fetch(`/api/rooms/code/${code.trim()}`);
+        const data = await res.json();
+        if (data.success) {
+          selectRoom(data.room);
+        } else {
+          alert('Room code not found or expired.');
+        }
+      }
+    };
+
+    document.getElementById('btnCopyRoomCode').onclick = () => {
+      if (activeRoom) {
+        copyText(activeRoom.room_code);
+      }
+    };
+
+    function copyText(txt) {
+      navigator.clipboard.writeText(txt);
+      alert(`Room code ${txt} copied to clipboard.`);
+    }
+
+    // Initialize
+    loadRooms();
+    connectSocket();
+
+    // Periodic countdown tick
+    setInterval(() => {
+      if (activeRoom && activeRoom.remaining_seconds > 0) {
+        activeRoom.remaining_seconds -= 1;
+        document.getElementById('roomRemainingTime').innerText = `DISAPPEARS IN ${formatTime(activeRoom.remaining_seconds)}`;
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

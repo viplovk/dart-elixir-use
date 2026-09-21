@@ -1,0 +1,15 @@
+{
+  "name": "hello-world-dart-elixir",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "mkdir -p dist && cp -r public/* dist/",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.21.3"
+  }
+}
