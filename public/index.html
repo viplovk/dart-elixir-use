@@ -664,6 +664,25 @@
     </div>
   </div>
 
+  <!-- Join Room Modal -->
+  <div class="modal-overlay" id="joinRoomModal">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 class="mono" style="font-size: 14px; color: var(--neon-green);">JOIN CHANNEL BY CODE</h3>
+        <button id="btnCloseJoinModal" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">TACTICAL CHANNEL CODE</label>
+        <input type="text" id="joinRoomCodeInput" class="form-input mono" placeholder="E.G. VIPER-IK35" style="text-transform: uppercase; letter-spacing: 1.5px;">
+      </div>
+
+      <div id="joinErrorMsg" class="mono" style="color: var(--danger-red); font-size: 11px; display: none;"></div>
+
+      <button class="btn btn-primary" id="btnSubmitJoinRoom" style="width: 100%; justify-content: center; padding: 12px;">CONNECT TO CHANNEL</button>
+    </div>
+  </div>
+
   <script>
     // --- Tactical Audio Engine & Phoenix Client ---
     let activeRoom = null;
@@ -1007,15 +1026,59 @@
     }
 
     function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60).toString().padLeft(2, '0');
-      const secs = (seconds % 60).toString().padLeft(2, '0');
+      const s = Math.max(0, Math.floor(seconds));
+      const mins = Math.floor(s / 60).toString().padStart(2, '0');
+      const secs = (s % 60).toString().padStart(2, '0');
       return `${mins}:${secs}`;
     }
 
     // Modal Operations
     const createModal = document.getElementById('createRoomModal');
+    const joinModal = document.getElementById('joinRoomModal');
+    const joinCodeInput = document.getElementById('joinRoomCodeInput');
+    const joinErrorMsg = document.getElementById('joinErrorMsg');
+
     document.getElementById('btnOpenCreateModal').onclick = () => createModal.classList.add('active');
     document.getElementById('btnCloseModal').onclick = () => createModal.classList.remove('active');
+
+    document.getElementById('btnJoinRoomCode').onclick = () => {
+      joinErrorMsg.style.display = 'none';
+      joinCodeInput.value = '';
+      joinModal.classList.add('active');
+      setTimeout(() => joinCodeInput.focus(), 50);
+    };
+    document.getElementById('btnCloseJoinModal').onclick = () => joinModal.classList.remove('active');
+
+    document.getElementById('btnSubmitJoinRoom').onclick = async () => {
+      const code = joinCodeInput.value.trim().toUpperCase();
+      if (!code) {
+        joinErrorMsg.innerText = 'PLEASE ENTER A VALID ROOM CODE.';
+        joinErrorMsg.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/rooms/code/${encodeURIComponent(code)}`);
+        const data = await res.json();
+        if (data.success && data.room) {
+          joinModal.classList.remove('active');
+          await loadRooms();
+          selectRoom(data.room);
+        } else {
+          joinErrorMsg.innerText = data.error || 'CHANNEL NOT FOUND OR EXPIRED.';
+          joinErrorMsg.style.display = 'block';
+        }
+      } catch (e) {
+        joinErrorMsg.innerText = 'CONNECTION ERROR. RETRYING...';
+        joinErrorMsg.style.display = 'block';
+      }
+    };
+
+    joinCodeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('btnSubmitJoinRoom').click();
+      }
+    });
 
     document.querySelectorAll('.ttl-btn').forEach(btn => {
       btn.onclick = () => {
@@ -1051,19 +1114,6 @@
       }
     };
 
-    document.getElementById('btnJoinRoomCode').onclick = async () => {
-      const code = prompt('Enter ephemeral room code (e.g. NOVA-7K2P):');
-      if (code) {
-        const res = await fetch(`/api/rooms/code/${code.trim()}`);
-        const data = await res.json();
-        if (data.success) {
-          selectRoom(data.room);
-        } else {
-          alert('Room code not found or expired.');
-        }
-      }
-    };
-
     document.getElementById('btnCopyRoomCode').onclick = () => {
       if (activeRoom) {
         copyText(activeRoom.room_code);
@@ -1071,8 +1121,27 @@
     };
 
     function copyText(txt) {
-      navigator.clipboard.writeText(txt);
-      alert(`Room code ${txt} copied to clipboard.`);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).catch(() => {});
+      } else {
+        const temp = document.createElement('textarea');
+        temp.value = txt;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+      }
+
+      const copyLabel = document.getElementById('codeCopyLabel');
+      if (copyLabel) {
+        const orig = copyLabel.innerText;
+        copyLabel.innerText = 'COPIED!';
+        copyLabel.style.color = 'var(--neon-green)';
+        setTimeout(() => {
+          copyLabel.innerText = orig;
+          copyLabel.style.color = '';
+        }, 1500);
+      }
     }
 
     // Initialize
